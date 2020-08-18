@@ -12,8 +12,11 @@ import com.android.volley.Request
 import com.android.volley.Response
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
+import com.google.gson.Gson
+import com.google.gson.JsonParser
 import okhttp3.Call
 import okhttp3.OkHttpClient
+import org.json.JSONObject
 import java.io.IOException
 import java.io.InputStream
 import java.lang.Exception
@@ -57,7 +60,7 @@ class MainActivity : AppCompatActivity(), CompletadoListener {
 
         bVolley.setOnClickListener {
             if(Network.hayRed(this)){
-                solicitudHttpVolley("https://www.google.com")
+                solicitudHttpVolley("https://swapi.dev/api/starships/")
             }
             else{
                 Toast.makeText(this,"No hay una conexión de red!", Toast.LENGTH_LONG).show()
@@ -66,7 +69,7 @@ class MainActivity : AppCompatActivity(), CompletadoListener {
 
         bOkHttp.setOnClickListener {
             if (Network.hayRed(this)){
-                solicitudHttpOk("https://www.google.com")
+                solicitudHttpOk("https://swapi.dev/api/starships/")
             }
             else{
                 Toast.makeText(this,"No hay una conexion de red", Toast.LENGTH_SHORT).show()
@@ -104,9 +107,23 @@ class MainActivity : AppCompatActivity(), CompletadoListener {
         val solicitud = StringRequest(Request.Method.GET, url, Response.Listener<String>{
             response ->
             try{
-                Log.d("solicitudHttpVolley", response)
-            }catch (e:Exception){
+                val json = JSONObject(response)
+                val results = json.getJSONArray("results")
+                for (i in 0..results.length()-1){
+                    val name = results.getJSONObject(i).getString("name")
+                    val model = results.getJSONObject(i).getString("model")
+                    val manufacturer = results.getJSONObject(i).getString("manufacturer")
+                    val starship_class = results.getJSONObject(i).getString("starship_class")
+                    val startship = Startship(name,model,manufacturer,starship_class)
+                    Log.d("Nave Numero", i.toString())
+                    Log.d("Nombre", startship.name)
+                    Log.d("Modelo", startship.model)
+                    Log.d("Creado", startship.manufacturer)
+                    Log.d("Clase", startship.starship_class)
+                }
 
+            }catch (e:Exception){
+                Log.d("error",e.toString())
             }
 
         },Response.ErrorListener {  })
@@ -119,7 +136,7 @@ class MainActivity : AppCompatActivity(), CompletadoListener {
         val solicitud = okhttp3.Request.Builder().url(url).build()
         cliente.newCall(solicitud).enqueue(object : okhttp3.Callback{
             override fun onFailure(call: Call, e: IOException) {
-                //implementar error
+                Log.d("Error HttpOk",e.toString())
             }
 
             override fun onResponse(call: Call, response: okhttp3.Response) {
@@ -127,10 +144,16 @@ class MainActivity : AppCompatActivity(), CompletadoListener {
                 this@MainActivity.runOnUiThread{
                     try {
                         if (result != null) {
-                            Log.d("solicitudHttpOk",result)
+                            val json = JSONObject(result)
+                            val results = json.get("results").toString()
+                            val list = ArrayList<Startship>()
+                            val listresult:Array<Startship> = Gson().fromJson(results,Array<Startship>::class.java)
+                            list.addAll(listresult)
+                            Log.d("solicitudHttpOk", list.count().toString())
                         }
 
                     }catch (e:Exception){
+                        Log.d("Error response",e.toString())
                     }
 
                 }
